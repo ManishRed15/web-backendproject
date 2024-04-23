@@ -1,182 +1,128 @@
-from flask import Flask, request, jsonify, redirect, url_for
+from flask import Flask, request, jsonify, redirect, url_for, make_response
 from flask_mysqldb import MySQL
 from flask_cors import CORS
-'''These imports are essential for building a web application with Flask and integrating MySQL database 
-and Cross-Origin Resource Sharing (CORS) functionality.'''
+from flask_pymongo import PyMongo 
+from bson import ObjectId
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 app = Flask(__name__) #An instance of the Flask application is created
 cors = CORS(app) #CORS is enabled here
 
-# MySQL configuration
-app.config['MYSQL_USER'] = 'sql5693004'
-app.config['MYSQL_PASSWORD'] = 'ruStJABw4n'
-app.config['MYSQL_HOST'] = 'sql5.freemysqlhosting.net'
-app.config['MYSQL_DB'] = 'sql5693004'
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/Myfirstdatabase'
+mongo = PyMongo(app)
 
+secret_key = os.urandom(32)
 
-mysql = MySQL(app) # An instance of the MySQL extension is created and initialized with the Flask application using MySQL(app)
+app.config['JWT_SECRET_KEY'] = secret_key  # Change this to a secret key of your choice
+jwt = JWTManager(app)
+
+# Define the path to the upload folder
+app.config['UPLOAD_FOLDER'] = r'C:\Users\manish.reddy\Desktop\upload_folder'
+
+# Define a route to handle file uploads
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # Save the file to the upload folder
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+
+    return jsonify({'message': 'File uploaded successfully'}), 200
 
 
 @app.route('/')
 def index():
-    cur = mysql.connection.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            email VARCHAR(100) UNIQUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    mysql.connection.commit()
-    cur.close()
     return "Welcome to the Home Page and users table is created"
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['GET'])
 def register():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    username = request.args.get('username')
+    password = request.args.get('password')
 
-    cur = mysql.connection.cursor()
-    cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
-    mysql.connection.commit()
-    cur.close()
+    users_collection = mongo.db.users
+    user_data = {
+        'username': username,
+        'password': password
+    }
+    users_collection.insert_one(user_data)
 
-    # Redirect to the home page after registration
-    #return redirect(url_for('index'))
-
-
-    return "User registered successfully", 201  # Return status code 201 Created
+    return "User registered successfully", 201
 
 @app.route('/users', methods=['GET'])
 def get_users():
-    try: #Error codes are specified according to data sent and operations performed
-        cur = mysql.connection.cursor()
-        #Get query parameters
-        '''This code checks if JSON data is provided using request.is_json. 
-        If JSON data is provided, it extracts the query parameters from the JSON payload. 
-        If not, it gets the query parameters from the URL as before. Then, it executes the SQL query accordingly. 
-        If no users are found, it returns a 404 error.'''
-        if request.is_json:  # Check if JSON data is provided
-            data = request.json
-            username_filter = data.get('username')
-        else:  # If not JSON data, get query parameters from URL
-            username_filter = request.args.get('username') # Get the value of 'username' query parameter
-        # Build SQL query based on query parameters
-        if username_filter:
-            cur.execute("SELECT * FROM users WHERE username = %s", (username_filter,))
-        else:
-            cur.execute("SELECT * FROM users")
-
-        users = cur.fetchall()
-        cur.close()
-
-        user_list = []
-        for user in users:
-            user_list.append({
-                'id': user[0],
-                'username': user[1],
-                'password': user[2]
-            })
-
-        if not user_list: # Check if user_list is empty
-            return "No such user exists", 404
-
-        return jsonify(user_list), 200 # Return status code 200 OK
-        # Redirect to the home page after fetching the list of users. Uncomment this to url_for execution 
-        #return redirect(url_for('index')) 
-    except Exception as e:
-        print("An error occurred:", e)
-        return "An error occurred while processing your request", 500 # Return status code 500 Internal Server Error
-
-
-'''Open your browser.
-Construct the URL for the /users endpoint with the desired query parameters. For example:
-If you want to filter users by username, you can append ?username=desired_username to the endpoint URL.
-Replace desired_username with the username you want to filter by.
-The final URL might look like this: http://127.0.0.1:5000/users?username=desired_username.'''
+    users_collection = mongo.db.users
+    users = list(users_collection.find({}, {'_id': 0}))  # Exclude '_id' field from the response
+    return jsonify(users), 200
 
 # Create a route to retrieve user information based on username
 @app.route('/users/<username>', methods=['GET'])
 def get_user_by_username(username):
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM users WHERE username = %s", (username,))
-    user = cur.fetchone()
-    cur.close()
-
+    users_collection = mongo.db.users
+    user = users_collection.find_one({'username': username}, {'_id': 0})
     if user:
-        user_info = {
-            'id': user[0],
-            'username': user[1],
-            'password': user[2]
-            # Add more fields as needed
-        }
-        return jsonify(user_info), 200  # Return user information with status code 200 OK
+        return jsonify(user), 200
     else:
-        return "User not found", 404  # Return 404 Not Found if user not found
+        return "User not found", 404
 
-# Create a route to retrieve user information based on user ID
-@app.route('/users/id/<int:user_id>', methods=['GET'])
+@app.route('/users/id/<user_id>', methods=['GET'])
 def get_user_by_id(user_id):
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user = cur.fetchone()
-    cur.close()
-
-    if user:
-        user_info = {
-            'id': user[0],
-            'username': user[1],
-            'password': user[2]
-            # Add more fields as needed
-        }
-        return jsonify(user_info), 200  # Return user information with status code 200 OK
-    else:
-        return "User not found", 404  # Return 404 Not Found if user not found\
-    
-
-@app.route('/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
     try:
-        username = request.json.get('username')
-        password = request.json.get('password')
+        # Convert user_id string to ObjectId
+        user_id_obj = ObjectId(user_id)
 
-        cur = mysql.connection.cursor()
-        cur.execute("UPDATE users SET username = %s, password = %s WHERE id = %s", (username, password, user_id))
-        mysql.connection.commit()
-        cur.close()
+        # Query the MongoDB collection
+        users_collection = mongo.db.users
+        user = users_collection.find_one({'_id': user_id_obj}, {'_id': 0})
 
-        return "User updated successfully", 200  # Return status code 200 OK
+        if user:
+            return jsonify(user), 200
+        else:
+            return "User not found", 404
     except Exception as e:
         return str(e), 400  # Return status code 400 Bad Request if there's an error
-
-
-@app.route('/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    try:
-        cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
-        mysql.connection.commit()
-        cur.close()
-
-        return "User deleted successfully", 200  # Return status code 200 OK
-    except Exception as e:
-        return str(e), 500  # Return status code 500 Internal Server Error if there's an error
-
     
 
-@app.route('/example', methods=['GET'])
-def example_route():
-    # Access custom headers
-    custom_header_value = request.headers.get('X-Custom-Header')
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username')
+    password = request.json.get('password')
 
-    if custom_header_value:
-        return f"Custom header value: {custom_header_value}"
+    print("Received username:", username)
+    print("Received password:", password)
+
+    # Verify user credentials
+    if username == 'mark' and password == 'password567':
+        access_token = create_access_token(identity=username)
+        return jsonify(access_token=access_token), 200
     else:
-        return "No custom header found"
+        return jsonify({"msg": "Invalid username or password"}), 401
+    
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
+@app.route('/set-cookie', methods=['GET'])
+def set_cookie():
+    resp = make_response("Cookie set successfully")
+    resp.set_cookie('username', 'example_username')
+    return resp
+
+@app.route('/get-cookie', methods=['GET'])
+def get_cookie():
+    username = request.cookies.get('username')
+    return f"Username from cookie: {username}"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
-    

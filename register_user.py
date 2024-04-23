@@ -4,11 +4,11 @@ url = 'http://127.0.0.1:5000/register'  # Update the URL with your server's addr
 
 # Data to be sent in the POST request
 user_list = [
-   # {'username': 'Rahul', 'password': 'password1'},
-   # {'username': 'John', 'password': 'password2'},
-   # {'username': 'Alice', 'password': 'password3'},
-   # {'username': 'Raol', 'password': 'password35'} , 
-   {'username': 'Randy', 'password': 'password40'}, 
+    {'username': 'Rahul', 'password': 'password1'},
+    {'username': 'John', 'password': 'password2'},
+    {'username': 'Alice', 'password': 'password3'},
+    {'username': 'Raol', 'password': 'password35'} , 
+   # {'username': 'Randy', 'password': 'password40'}, 
     
 ]
 
