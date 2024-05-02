@@ -4,7 +4,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     var username = document.getElementById('username').value;
     var password = document.getElementById('password').value;
 
-    fetch('http://localhost:5000/login', {
+    fetch('http://127.0.0.1:5000/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -23,7 +23,9 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     })
     .then(data => {
         console.log(data);
-        document.getElementById('message').innerText = 'Login successful. Access token: ' + data.access_token;
+        document.getElementById('loginForm').style.display = 'none'; // Hide the login form
+        document.getElementById('message').innerText = 'Welcome ' + username; // Display welcome message
+        document.getElementById('accessToken').innerText = 'Access token: ' + data.access_token; // Display access token
     })
     .catch(error => {
         console.error('Error:', error.message);

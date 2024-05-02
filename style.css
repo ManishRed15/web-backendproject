@@ -1,5 +1,8 @@
 body {
     font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
 }
 
 .container {
@@ -8,28 +11,37 @@ body {
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
     text-align: center;
 }
 
-label,
-input,
-button {
-    display: block;
-    margin-bottom: 10px;
+.form-group {
+    margin-bottom: 20px;
 }
 
-input,
-button {
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    box-sizing: border-box;
 }
 
 button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
     background-color: #007bff;
     color: #fff;
     cursor: pointer;
@@ -42,4 +54,14 @@ button:hover {
 #message {
     margin-top: 10px;
     text-align: center;
+    color: #ff0000; /* Error message color */
+}
+
+/* Add this new CSS for animations and customized styling */
+.login-btn {
+    transition: background-color 0.3s ease;
+}
+
+.login-btn:hover {
+    background-color: #0056b3;
 }

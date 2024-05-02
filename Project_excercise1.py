@@ -3,8 +3,7 @@ from flask_mysqldb import MySQL
 from flask_cors import CORS
 from flask_pymongo import PyMongo 
 from bson import ObjectId
-from flask_jwt_extended import JWTManager
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity 
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 
