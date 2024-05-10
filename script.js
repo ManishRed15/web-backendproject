@@ -1,4 +1,4 @@
-// Function to handle user registration
+//Function to handle user registration
 function registerUser() {
     var regUsername = document.getElementById('regUsername').value;
     var regPassword = document.getElementById('regPassword').value;

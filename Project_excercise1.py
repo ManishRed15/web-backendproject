@@ -123,5 +123,26 @@ def get_cookie():
     username = request.cookies.get('username')
     return f"Username from cookie: {username}"
 
+# Update user route
+@app.route('/users/<username>', methods=['PUT'])
+def update_user(username):
+    users_collection = mongo.db.users
+    user_data = request.json  # Data to update
+    result = users_collection.update_one({'username': username}, {'$set': user_data})
+    if result.modified_count:
+        return jsonify({'message': 'User updated successfully'}), 200
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+# Delete user route
+@app.route('/users/<username>', methods=['DELETE'])
+def delete_user(username):
+    users_collection = mongo.db.users
+    result = users_collection.delete_one({'username': username})
+    if result.deleted_count:
+        return jsonify({'message': 'User deleted successfully'}), 200
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
